@@ -66,10 +66,17 @@ def test_calculate_overlap_percentage_measures_other_group_share() -> None:
 
 def test_format_overlap_results_renders_both_directions_and_two_decimals() -> None:
     result = format_overlap_results(
+        (("小礼猫", 1234), ("酷萨", 2234)),
         (
             ("小礼猫", "酷萨", 33.333),
             ("酷萨", "小礼猫", 35.333),
         ),
     )
 
-    assert result == "粉丝团重合查询\n小礼猫&酷萨：33.33%\n酷萨&小礼猫：35.33%"
+    assert result == (
+        "粉丝团重合查询\n"
+        "小礼猫总数：1234\n"
+        "酷萨总数：2234\n"
+        "小礼猫&酷萨：33.33%\n"
+        "酷萨&小礼猫：35.33%"
+    )

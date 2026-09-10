@@ -15,6 +15,7 @@ RoomId = NewType("RoomId", int)
 UserId = NewType("UserId", int)
 FanId = NewType("FanId", int)
 FanIds: TypeAlias = frozenset[FanId]
+GroupTotal: TypeAlias = tuple[str, int]
 OverlapPair: TypeAlias = tuple[str, str, float]
 
 INVALID_INPUT_MESSAGE: Final = "请输入完整粉丝团名称进行查重"
@@ -96,9 +97,13 @@ def calculate_overlap_percentage(
     return len(base_ids & other_ids) / len(base_ids) * 100
 
 
-def format_overlap_results(results: Sequence[OverlapPair]) -> str:
-    """Render the heading and pairwise overlap percentages."""
+def format_overlap_results(
+    totals: Sequence[GroupTotal],
+    results: Sequence[OverlapPair],
+) -> str:
+    """Render group totals followed by pairwise overlap percentages."""
     lines = ["粉丝团重合查询"]
+    lines.extend(f"{medal}总数：{total}" for medal, total in totals)
     lines.extend(
         f"{left}&{right}：{percentage:.2f}%"
         for left, right, percentage in results

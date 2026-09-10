@@ -17,6 +17,7 @@ from .config import Config
 from .core import (
     INVALID_INPUT_MESSAGE,
     FanGroup,
+    FanIds,
     OverlapPair,
     build_medal_index,
     calculate_overlap_percentage,
@@ -65,11 +66,12 @@ async def _(
     except FansCacheError:
         await matcher.finish("粉丝团缓存查询失败，请稍后再试")
 
+    group_fans: tuple[tuple[FanGroup, FanIds], ...] = tuple(
+        zip(groups, fan_ids, strict=True)
+    )
+    totals = tuple((group.medal, len(ids)) for group, ids in group_fans)
     pairs: list[OverlapPair] = []
-    for (left_group, left_ids), (right_group, right_ids) in combinations(
-        zip(groups, fan_ids, strict=True),
-        2,
-    ):
+    for (left_group, left_ids), (right_group, right_ids) in combinations(group_fans, 2):
         pairs.extend(
             (
                 (
@@ -84,4 +86,4 @@ async def _(
                 ),
             )
         )
-    await matcher.finish(format_overlap_results(pairs))
+    await matcher.finish(format_overlap_results(totals, pairs))
