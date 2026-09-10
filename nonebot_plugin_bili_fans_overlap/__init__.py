@@ -70,11 +70,18 @@ async def _(
         zip(groups, fan_ids, strict=True),
         2,
     ):
-        pairs.append(
+        pairs.extend(
             (
-                left_group.medal,
-                right_group.medal,
-                calculate_overlap_percentage(left_ids, right_ids),
+                (
+                    left_group.medal,
+                    right_group.medal,
+                    calculate_overlap_percentage(left_ids, right_ids),
+                ),
+                (
+                    right_group.medal,
+                    left_group.medal,
+                    calculate_overlap_percentage(right_ids, left_ids),
+                ),
             )
         )
     await matcher.finish(format_overlap_results(pairs))

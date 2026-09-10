@@ -85,16 +85,15 @@ def parse_medal_names(
 
 
 def calculate_overlap_percentage(
-    left: Collection[FanId],
-    right: Collection[FanId],
+    base: Collection[FanId],
+    other: Collection[FanId],
 ) -> float:
-    """Return Jaccard overlap as a percentage, rounded by the formatter."""
-    left_ids = frozenset(left)
-    right_ids = frozenset(right)
-    union = left_ids | right_ids
-    if not union:
+    """Return the other group's shared percentage of the base group."""
+    base_ids = frozenset(base)
+    if not base_ids:
         return 0.0
-    return len(left_ids & right_ids) / len(union) * 100
+    other_ids = frozenset(other)
+    return len(base_ids & other_ids) / len(base_ids) * 100
 
 
 def format_overlap_results(results: Sequence[OverlapPair]) -> str:
