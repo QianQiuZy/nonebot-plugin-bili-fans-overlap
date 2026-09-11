@@ -29,6 +29,7 @@ from .core import (
     parse_medal_names,
     parse_two_medal_names,
 )
+from .listing import format_room_list
 from .single import (
     SINGLE_DETAILED_INVALID_INPUT_MESSAGE,
     calculate_single_details,
@@ -39,7 +40,12 @@ from .single import (
 __plugin_meta__ = PluginMetadata(
     name="B站粉丝团查重",
     description="查询多个 B 站粉丝团之间的 UID 重合率。",
-    usage=("/粉丝团查重 小礼猫 酷萨 音悦生\n/粉丝团查重详细 小礼猫 酷萨\n/粉丝团详细 小礼猫"),
+    usage=(
+        "/粉丝团查重 小礼猫 酷萨 音悦生\n"
+        "/粉丝团查重详细 小礼猫 酷萨\n"
+        "/粉丝团详细 小礼猫\n"
+        "/粉丝团列表"
+    ),
     type="application",
     config=Config,
 )
@@ -63,6 +69,12 @@ fans_overlap_detailed = on_command(
 )
 fans_detailed = on_command(
     "粉丝团详细",
+    force_whitespace=True,
+    priority=5,
+    block=True,
+)
+fans_list = on_command(
+    "粉丝团列表",
     force_whitespace=True,
     priority=5,
     block=True,
@@ -207,3 +219,12 @@ async def _(
         await matcher.finish("粉丝团缓存查询失败，请稍后再试")
 
     await matcher.finish(format_single_details(group, calculate_single_details(snapshots[0])))
+
+
+@fans_list.handle()
+async def _(
+    bot: Bot,
+    event: Event,
+) -> None:
+    """Handle a request for all configured fan-medal rooms."""
+    await send_detailed_forward(bot, event, format_room_list(_ROOMS))

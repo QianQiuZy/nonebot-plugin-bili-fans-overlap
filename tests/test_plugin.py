@@ -6,7 +6,10 @@ from nonebot.adapters.onebot.v11 import GroupMessageEvent, Message, MessageSegme
 def test_plugin_metadata_and_command_registration() -> None:
     assert plugin.__plugin_meta__.name == "B站粉丝团查重"
     assert plugin.__plugin_meta__.usage == (
-        "/粉丝团查重 小礼猫 酷萨 音悦生\n/粉丝团查重详细 小礼猫 酷萨\n/粉丝团详细 小礼猫"
+        "/粉丝团查重 小礼猫 酷萨 音悦生\n"
+        "/粉丝团查重详细 小礼猫 酷萨\n"
+        "/粉丝团详细 小礼猫\n"
+        "/粉丝团列表"
     )
     assert plugin.fans_overlap.type == "message"
     assert plugin.fans_overlap.priority == 5
@@ -17,6 +20,9 @@ def test_plugin_metadata_and_command_registration() -> None:
     assert plugin.fans_detailed.type == "message"
     assert plugin.fans_detailed.priority == 5
     assert plugin.fans_detailed.block
+    assert plugin.fans_list.type == "message"
+    assert plugin.fans_list.priority == 5
+    assert plugin.fans_list.block
 
 
 class _RecordingBot:
