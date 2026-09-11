@@ -72,11 +72,15 @@ def test_format_detailed_overlap_results_renders_all_requested_buckets() -> None
         "酷萨总数：1\n"
         "小礼猫&酷萨：1 100.00%\n"
         "酷萨&小礼猫：1 100.00%\n"
+        "——————————\n"
         "小礼猫&酷萨 1~10级：1 100.00%\n"
+        "——————————\n"
         "酷萨&小礼猫 1~10级：1 100.00%\n"
+        "——————————\n"
         "小礼猫&酷萨 舰长：1 100.00%\n"
         "酷萨&小礼猫 舰长：1 100.00%\n"
         "小礼猫&酷萨共同上舰：1 100.00%\n"
+        "————说明————\n"
         "小礼猫&酷萨：小礼猫中拥有酷萨牌子占小礼猫的比重\n"
         "小礼猫&酷萨 1~10级：小礼猫中拥有酷萨牌子且小礼猫为1~10级\n"
         "小礼猫&酷萨 舰长：小礼猫中拥有酷萨牌子且为小礼猫舰长\n"
@@ -105,3 +109,4 @@ def test_format_detailed_overlap_results_keeps_required_zero_lines() -> None:
     assert "小礼猫&酷萨 1~10级：小礼猫中拥有酷萨牌子且小礼猫为1~10级" in output
     assert "小礼猫&酷萨 舰长：小礼猫中拥有酷萨牌子且为小礼猫舰长" in output
     assert "共同上舰：两者均有上舰（不论等级）" in output
+    assert "————说明————" in output

@@ -4,10 +4,10 @@
 
 from itertools import combinations
 from pathlib import Path
-from typing import Annotated, Final
+from typing import Annotated, Final, Protocol, cast
 
 from nonebot import get_plugin_config, on_command
-from nonebot.adapters.onebot.v11 import Message
+from nonebot.adapters.onebot.v11 import Bot, Event, GroupMessageEvent, Message, MessageSegment
 from nonebot.matcher import Matcher
 from nonebot.params import CommandArg
 from nonebot.plugin import PluginMetadata
@@ -41,6 +41,7 @@ __plugin_meta__ = PluginMetadata(
 _ROOMS_FILE: Final = Path(__file__).with_name("rooms.json")
 _ROOMS: Final[tuple[FanGroup, ...]] = load_rooms(_ROOMS_FILE)
 _MEDAL_INDEX = build_medal_index(_ROOMS)
+_INVALID_MESSAGE_ID: Final = "send_private_msg returned an invalid message ID"
 
 fans_overlap = on_command(
     "粉丝团查重",
@@ -54,6 +55,41 @@ fans_overlap_detailed = on_command(
     priority=5,
     block=True,
 )
+
+
+class _ApiBot(Protocol):
+    self_id: str
+
+    async def call_api(self, api: str, **data: object) -> object:
+        ...
+
+
+async def send_detailed_forward(bot: _ApiBot, event: Event, content: str) -> None:
+    """Send detailed results privately, then forward them to the requester."""
+    private_result = cast(
+        "dict[str, object]",
+        await bot.call_api(
+            "send_private_msg",
+            user_id=int(bot.self_id),
+            message=content,
+        ),
+    )
+    message_id = private_result.get("message_id")
+    if not isinstance(message_id, int):
+        raise TypeError(_INVALID_MESSAGE_ID)
+    messages = [MessageSegment.node(message_id)]
+    if isinstance(event, GroupMessageEvent):
+        _ = await bot.call_api(
+            "send_forward_msg",
+            group_id=event.group_id,
+            messages=messages,
+        )
+        return
+    _ = await bot.call_api(
+        "send_private_forward_msg",
+        user_id=int(event.get_user_id()),
+        messages=messages,
+    )
 
 
 @fans_overlap.handle()
@@ -101,6 +137,8 @@ async def _(
 
 @fans_overlap_detailed.handle()
 async def _(
+    bot: Bot,
+    event: Event,
     matcher: Matcher,
     args: Annotated[Message, CommandArg()],
 ) -> None:
@@ -120,4 +158,8 @@ async def _(
         await matcher.finish("粉丝团缓存查询失败，请稍后再试")
 
     stats = calculate_detailed_overlap(snapshots[0], snapshots[1])
-    await matcher.finish(format_detailed_overlap_results(groups[0], groups[1], stats))
+    await send_detailed_forward(
+        bot,
+        event,
+        format_detailed_overlap_results(groups[0], groups[1], stats),
+    )

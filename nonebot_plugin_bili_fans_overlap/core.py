@@ -33,6 +33,8 @@ GUARD_TIERS: Final[tuple[GuardTier, ...]] = (
     ("提督", 2),
     ("总督", 1),
 )
+DETAIL_SEPARATOR: Final = "——————————"
+DETAIL_EXPLANATION_SEPARATOR: Final = "————说明————"
 
 INVALID_INPUT_MESSAGE: Final = "请输入完整粉丝团名称进行查重"
 DETAILED_INVALID_INPUT_MESSAGE: Final = "详细查重仅支持两个完整粉丝团名称"
@@ -235,6 +237,7 @@ def format_detailed_overlap_results(
             f"{_format_count_percentage(stats.second.intersection_count, stats.second.base_total)}"
         ),
     ]
+    lines.append(DETAIL_SEPARATOR)
     lines.extend(
         (
             f"{first.medal}&{second.medal} {lower}~{upper}级："
@@ -243,6 +246,7 @@ def format_detailed_overlap_results(
         for (lower, upper), count in zip(LEVEL_BUCKETS, stats.first.level_counts, strict=True)
         if count > 0
     )
+    lines.append(DETAIL_SEPARATOR)
     lines.extend(
         (
             f"{second.medal}&{first.medal} {lower}~{upper}级："
@@ -251,6 +255,7 @@ def format_detailed_overlap_results(
         for (lower, upper), count in zip(LEVEL_BUCKETS, stats.second.level_counts, strict=True)
         if count > 0
     )
+    lines.append(DETAIL_SEPARATOR)
     lines.extend(
         (
             f"{first.medal}&{second.medal} {label}："
@@ -272,6 +277,7 @@ def format_detailed_overlap_results(
         f"{_format_count_percentage(stats.shared_guard_count, stats.first.base_total)}"
     )
     lines.append(shared_guard_line)
+    lines.append(DETAIL_EXPLANATION_SEPARATOR)
     level_explanation = (
         f"{first.medal}&{second.medal} 1~10级："
         f"{first.medal}中拥有{second.medal}牌子且{first.medal}为1~10级"
