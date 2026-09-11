@@ -1,13 +1,12 @@
 import anyio
 import nonebot_plugin_bili_fans_overlap as plugin
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, Message, MessageSegment
 
 
 def test_plugin_metadata_and_command_registration() -> None:
     assert plugin.__plugin_meta__.name == "B站粉丝团查重"
     assert plugin.__plugin_meta__.usage == (
-        "/粉丝团查重 小礼猫 酷萨 音悦生\n"
-        "/粉丝团查重详细 小礼猫 酷萨"
+        "/粉丝团查重 小礼猫 酷萨 音悦生\n/粉丝团查重详细 小礼猫 酷萨\n/粉丝团详细 小礼猫"
     )
     assert plugin.fans_overlap.type == "message"
     assert plugin.fans_overlap.priority == 5
@@ -15,6 +14,9 @@ def test_plugin_metadata_and_command_registration() -> None:
     assert plugin.fans_overlap_detailed.type == "message"
     assert plugin.fans_overlap_detailed.priority == 5
     assert plugin.fans_overlap_detailed.block
+    assert plugin.fans_detailed.type == "message"
+    assert plugin.fans_detailed.priority == 5
+    assert plugin.fans_detailed.block
 
 
 class _RecordingBot:
@@ -22,13 +24,19 @@ class _RecordingBot:
 
     def __init__(self) -> None:
         self.self_id = "456"
-        self.calls: list[tuple[str, dict[str, object]]] = []
+        self.calls: list[
+            tuple[str, dict[str, str | int | Message | list[MessageSegment]]]
+        ] = []
 
-    async def call_api(self, api: str, **data: object) -> object:
+    async def call_api(
+        self,
+        api: str,
+        **data: str | int | Message | list[MessageSegment],
+    ) -> plugin.PrivateMessageResponse | None:
         self.calls.append((api, data))
         if api == "send_private_msg":
             return {"message_id": 9001}
-        return {}
+        return None
 
 
 def test_detailed_forward_sends_to_bot_self_before_group_forward() -> None:

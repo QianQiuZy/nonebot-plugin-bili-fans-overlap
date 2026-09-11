@@ -4,7 +4,7 @@
 
 from itertools import combinations
 from pathlib import Path
-from typing import Annotated, Final, Protocol, cast
+from typing import Annotated, Final, Protocol, TypeAlias, TypedDict
 
 from nonebot import get_plugin_config, on_command
 from nonebot.adapters.onebot.v11 import Bot, Event, GroupMessageEvent, Message, MessageSegment
@@ -29,11 +29,17 @@ from .core import (
     parse_medal_names,
     parse_two_medal_names,
 )
+from .single import (
+    SINGLE_DETAILED_INVALID_INPUT_MESSAGE,
+    calculate_single_details,
+    format_single_details,
+    parse_single_medal_name,
+)
 
 __plugin_meta__ = PluginMetadata(
     name="B站粉丝团查重",
     description="查询多个 B 站粉丝团之间的 UID 重合率。",
-    usage="/粉丝团查重 小礼猫 酷萨 音悦生\n/粉丝团查重详细 小礼猫 酷萨",
+    usage=("/粉丝团查重 小礼猫 酷萨 音悦生\n/粉丝团查重详细 小礼猫 酷萨\n/粉丝团详细 小礼猫"),
     type="application",
     config=Config,
 )
@@ -55,28 +61,43 @@ fans_overlap_detailed = on_command(
     priority=5,
     block=True,
 )
+fans_detailed = on_command(
+    "粉丝团详细",
+    force_whitespace=True,
+    priority=5,
+    block=True,
+)
+
+
+ApiValue: TypeAlias = str | int | Message | list[MessageSegment]
+
+
+class PrivateMessageResponse(TypedDict):
+    """Message identifier returned by the private-message API call."""
+
+    message_id: int
 
 
 class _ApiBot(Protocol):
     self_id: str
 
-    async def call_api(self, api: str, **data: object) -> object:
-        ...
+    async def call_api(
+        self,
+        api: str,
+        **data: ApiValue,
+    ) -> PrivateMessageResponse | None: ...
 
 
 async def send_detailed_forward(bot: _ApiBot, event: Event, content: str) -> None:
     """Send detailed results privately, then forward them to the requester."""
-    private_result = cast(
-        "dict[str, object]",
-        await bot.call_api(
-            "send_private_msg",
-            user_id=int(bot.self_id),
-            message=content,
-        ),
+    private_result = await bot.call_api(
+        "send_private_msg",
+        user_id=int(bot.self_id),
+        message=content,
     )
-    message_id = private_result.get("message_id")
-    if not isinstance(message_id, int):
+    if private_result is None:
         raise TypeError(_INVALID_MESSAGE_ID)
+    message_id = private_result["message_id"]
     messages = [MessageSegment.node(message_id)]
     if isinstance(event, GroupMessageEvent):
         _ = await bot.call_api(
@@ -163,3 +184,26 @@ async def _(
         event,
         format_detailed_overlap_results(groups[0], groups[1], stats),
     )
+
+
+@fans_detailed.handle()
+async def _(
+    matcher: Matcher,
+    args: Annotated[Message, CommandArg()],
+) -> None:
+    """Handle a detailed single-medal query."""
+    group = parse_single_medal_name(args.extract_plain_text(), _MEDAL_INDEX)
+    if group is None:
+        await matcher.finish(SINGLE_DETAILED_INVALID_INPUT_MESSAGE)
+
+    config = get_plugin_config(Config)
+    try:
+        snapshots = await fetch_fan_snapshots(
+            (group,),
+            config.bili_fans_overlap_api_base,
+            config.bili_fans_overlap_http_timeout,
+        )
+    except FansCacheError:
+        await matcher.finish("粉丝团缓存查询失败，请稍后再试")
+
+    await matcher.finish(format_single_details(group, calculate_single_details(snapshots[0])))
