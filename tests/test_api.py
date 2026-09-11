@@ -2,7 +2,11 @@ from typing import final
 
 import httpx2
 import pytest
-from nonebot_plugin_bili_fans_overlap.api import FansCacheError, fetch_fan_ids
+from nonebot_plugin_bili_fans_overlap.api import (
+    FansCacheError,
+    fetch_fan_ids,
+    fetch_fan_snapshots,
+)
 from nonebot_plugin_bili_fans_overlap.core import FanGroup, RoomId, UserId
 
 
@@ -74,3 +78,61 @@ async def test_fetch_fan_ids_raises_for_nonzero_cache_code(
 
     with pytest.raises(FansCacheError, match="cache returned code -1"):
         _ = await fetch_fan_ids((_group(1),), "http://cache", 1.0)
+
+
+@pytest.mark.asyncio
+async def test_fetch_fan_snapshots_reads_nonzero_guard_levels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
+            200,
+            json={
+                "code": 0,
+                "msg": "success",
+                "uid": 99,
+                "room_id": 1,
+                "medal": {"101": 1, "102": 2},
+                "guard_level": {"101": 3, "102": 0},
+            },
+        )
+
+    def create_client(api_base: str, _timeout_seconds: float) -> _ClientContext:
+        return _ClientContext(
+            httpx2.AsyncClient(base_url=api_base, transport=httpx2.MockTransport(handler)),
+        )
+
+    monkeypatch.setattr("nonebot_plugin_bili_fans_overlap.api._create_client", create_client)
+
+    result = await fetch_fan_snapshots((_group(1),), "http://cache", 1.0)
+
+    assert result[0].medal_levels == {101: 1, 102: 2}
+    assert result[0].guard_levels == {101: 3}
+
+
+@pytest.mark.asyncio
+async def test_fetch_fan_snapshots_rejects_uninitialized_guard_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
+            200,
+            json={
+                "code": 0,
+                "msg": "success",
+                "uid": 99,
+                "room_id": 1,
+                "medal": {"101": 1},
+                "guard_level": None,
+            },
+        )
+
+    def create_client(api_base: str, _timeout_seconds: float) -> _ClientContext:
+        return _ClientContext(
+            httpx2.AsyncClient(base_url=api_base, transport=httpx2.MockTransport(handler)),
+        )
+
+    monkeypatch.setattr("nonebot_plugin_bili_fans_overlap.api._create_client", create_client)
+
+    with pytest.raises(FansCacheError, match="guard cache is not initialized"):
+        _ = await fetch_fan_snapshots((_group(1),), "http://cache", 1.0)
